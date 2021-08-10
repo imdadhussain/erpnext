@@ -5,13 +5,13 @@
 import json
 
 import frappe
-from erpnext.accounts.doctype.journal_entry.journal_entry import get_default_bank_cash_account
 from erpnext.erpnext_integrations.doctype.plaid_settings.plaid_connector import PlaidConnector
 from frappe import _
 from frappe.desk.doctype.tag.tag import add_tag
 from frappe.model.document import Document
 from frappe.utils import add_months, formatdate, getdate, today
 
+from plaid.errors import ItemError
 
 class PlaidSettings(Document):
 	@staticmethod
@@ -50,7 +50,7 @@ def add_institution(token, response):
 			})
 			bank.insert()
 		except Exception:
-			frappe.throw(frappe.get_traceback())
+			frappe.log_error(frappe.get_traceback(), title=_('Plaid Link Error'))
 	else:
 		bank = frappe.get_doc("Bank", response["institution"]["name"])
 		bank.plaid_access_token = access_token
@@ -69,10 +69,6 @@ def add_bank_accounts(response, bank, company):
 	bank = json.loads(bank)
 	result = []
 
-	default_gl_account = get_default_bank_cash_account(company, "Bank")
-	if not default_gl_account:
-		frappe.throw(_("Please setup a default bank account for company {0}".format(company)))
-
 	for account in response["accounts"]:
 		acc_type = frappe.db.get_value("Account Type", account["type"])
 		if not acc_type:
@@ -82,12 +78,17 @@ def add_bank_accounts(response, bank, company):
 		if not acc_subtype:
 			add_account_subtype(account["subtype"])
 
-		if not frappe.db.exists("Bank Account", dict(integration_id=account["id"])):
+		existing_bank_account = frappe.db.exists("Bank Account", {
+			'account_name': account["name"],
+			'bank': bank["bank_name"]
+		})
+
+		if not existing_bank_account:
 			try:
 				new_account = frappe.get_doc({
 					"doctype": "Bank Account",
 					"bank": bank["bank_name"],
-					"account": default_gl_account.account,
+					"account": create_account_head(company, bank, account),
 					"account_name": account["name"],
 					"account_type": account["type"] or "",
 					"account_subtype": account["subtype"] or "",
@@ -102,10 +103,27 @@ def add_bank_accounts(response, bank, company):
 			except frappe.UniqueValidationError:
 				frappe.msgprint(_("Bank account {0} already exists and could not be created again").format(account["name"]))
 			except Exception:
-				frappe.throw(frappe.get_traceback())
+				frappe.log_error(frappe.get_traceback(), title=_("Plaid Link Error"))
+				frappe.throw(_("There was an error creating Bank Account while linking with Plaid."), 
+					title=_("Plaid Link Failed"))
 
 		else:
-			result.append(frappe.db.get_value("Bank Account", dict(integration_id=account["id"]), "name"))
+			try:
+				existing_account = frappe.get_doc('Bank Account', existing_bank_account)
+				existing_account.update({
+					"bank": bank["bank_name"],
+					"account_name": account["name"],
+					"account_type": account.get("type", ""),
+					"account_subtype": account.get("subtype", ""),
+					"mask": account.get("mask", ""),
+					"integration_id": account["id"]
+				})
+				existing_account.save()
+				result.append(existing_bank_account)
+			except Exception:
+				frappe.log_error(frappe.get_traceback(), title=_("Plaid Link Error"))
+				frappe.throw(_("There was an error updating Bank Account {} while linking with Plaid.").format(
+					existing_bank_account), title=_("Plaid Link Failed"))
 
 	return result
 
@@ -176,9 +194,16 @@ def get_transactions(bank, bank_account=None, start_date=None, end_date=None):
 		account_id = None
 
 	plaid = PlaidConnector(access_token)
-	transactions = plaid.get_transactions(start_date=start_date, end_date=end_date, account_id=account_id)
 
-	return transactions
+	try:
+		transactions = plaid.get_transactions(start_date=start_date, end_date=end_date, account_id=account_id)
+	except ItemError as e:
+		if e.code == "ITEM_LOGIN_REQUIRED":
+			msg = _("There was an error syncing transactions.") + " "
+			msg += _("Please refresh or reset the Plaid linking of the Bank {}.").format(bank) + " "
+			frappe.log_error(msg, title=_("Plaid Link Refresh Required"))
+
+	return transactions or []
 
 
 def new_bank_transaction(transaction):
@@ -242,3 +267,53 @@ def automatic_synchronization():
 				bank=plaid_account.bank,
 				bank_account=plaid_account.name
 			)
+
+@frappe.whitelist()
+def get_link_token_for_update(access_token):
+	plaid = PlaidConnector(access_token)
+	return plaid.get_link_token(update_mode=True)
+
+def create_account_head(company, bank, account):
+	# find out parant account so that we it will create account head under that class.
+	parent_account = frappe.db.get_value("Account",
+		filters={"account_type": "Bank", "root_type": "Asset", "is_group": 0, "company": company}, fieldname="parent_account")
+	if not parent_account:
+		parent_account = frappe.db.get_value("Account",
+			filters={"account_type": "Bank", "root_type": "Asset", "is_group": 1, "company": company})
+
+	# create unquie account head for bank accounts.
+	new_account_head = frappe.get_doc({
+		"doctype": "Account",
+		"account_name": bank["bank_name"] + "-" + account["name"],
+		"parent_account": parent_account,
+		"account_number": get_max_account_number(parent_account),
+		"company": company
+	})
+	new_account_head.insert()
+	return new_account_head.name
+
+def get_max_account_number(parent_account):
+	"""
+		Return new account number for account head.
+
+			Parameter:
+				parent_account(str): Parent account of new account head.
+
+			Returns:
+				new_account_number (int): it will find largest account number and increase by specified interval and return.
+	"""
+
+	INCREASING_ORDER_BY = 10
+	accounts = frappe.get_all("Account", filters={"parent_account": parent_account}, fields=["name","account_number"])
+	account_number_list = []
+	for account in accounts:
+		if account.account_number:
+			account_number_list.append(account.account_number)
+
+	if not account_number_list:
+		return
+
+	formated_account_number_list = list(map(int, account_number_list))
+	formated_account_number_list.sort()
+	new_account_number = formated_account_number_list[-1] + INCREASING_ORDER_BY
+	return new_account_number
