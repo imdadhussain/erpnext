@@ -75,18 +75,18 @@ class TestPaymentRequest(unittest.TestCase):
 
 		self.assertEqual(so_inr.advance_paid, 1000)
 
-		si_usd = create_sales_invoice(customer="_Test Customer USD", debit_to="_Test Receivable USD - _TC",
-			currency="USD", conversion_rate=50)
+		si_usd = create_sales_invoice(customer="_Test Customer", debit_to="_Test Receivable - _TC",
+			currency="INR", conversion_rate=1)
 
 		pr = make_payment_request(dt="Sales Invoice", dn=si_usd.name, recipient_id="saurabh@erpnext.com",
-			mute_email=1, payment_gateway="_Test Gateway - USD", submit_doc=1, return_doc=1)
+			mute_email=1, payment_gateway="_Test Gateway - INR", submit_doc=1, return_doc=1)
 
 		pe = pr.set_as_paid()
 
 		expected_gle = dict((d[0], d) for d in [
-			["_Test Receivable USD - _TC", 0, 5000, si_usd.name],
-			[pr.payment_account, 6290.0, 0, None],
-			["_Test Exchange Gain/Loss - _TC", 0, 1290, None]
+			["_Test Receivable - _TC", 0, 100, si_usd.name],
+			[pr.payment_account, 100, 0, None],
+			["_Test Exchange Gain/Loss - _TC", 0, 0, None]
 		])
 
 		gl_entries = frappe.db.sql("""select account, debit, credit, against_voucher
@@ -102,15 +102,14 @@ class TestPaymentRequest(unittest.TestCase):
 			self.assertEqual(expected_gle[gle.account][3], gle.against_voucher)
 
 	def test_status(self):
-		si_usd = create_sales_invoice(customer="_Test Customer USD", debit_to="_Test Receivable USD - _TC",
-			currency="USD", conversion_rate=50)
+		si_usd = create_sales_invoice(customer="_Test Customer", debit_to="_Test Receivable - _TC",
+			currency="INR", conversion_rate=1)
 
 		pr = make_payment_request(dt="Sales Invoice", dn=si_usd.name, recipient_id="saurabh@erpnext.com",
-			mute_email=1, payment_gateway="_Test Gateway - USD", submit_doc=1, return_doc=1)
-
+			mute_email=1, payment_gateway="_Test Gateway - INR", submit_doc=1, return_doc=1)
+		
 		pe = pr.create_payment_entry()
 		pr.load_from_db()
-
 		self.assertEqual(pr.status, 'Paid')
 
 		pe.cancel()
