@@ -9,9 +9,9 @@ sudo apt update
 
 sudo apt-get install redis-server
 
-sudo apt install nodejs
-
-sudo apt install npm
+curl --silent --location https://deb.nodesource.com/setup_14.x | sudo -E bash -
+sudo apt-get install -y nodejs
+sudo npm install -g yarn
 
 pip install frappe-bench
 
