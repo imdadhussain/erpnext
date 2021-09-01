@@ -393,13 +393,17 @@ class PaymentEntry(AccountsController):
 			if self.payment_type == "Receive" \
 				and self.base_total_allocated_amount < self.base_received_amount + total_deductions \
 				and self.total_allocated_amount < self.paid_amount + (total_deductions / self.source_exchange_rate):
-					self.unallocated_amount = (self.base_received_amount + total_deductions - self.base_total_discounted_amount -
-						self.base_total_allocated_amount) / self.source_exchange_rate
+				# Nonetype throws type error while performing mathematical manipulation thus assigned a value zero 
+				if self.base_total_discounted_amount is None:
+					self.base_total_discounted_amount = 0
+					
+				self.unallocated_amount = (self.base_received_amount + total_deductions - self.base_total_discounted_amount -
+					self.base_total_allocated_amount) / self.source_exchange_rate
 			elif self.payment_type == "Pay" \
 				and self.base_total_allocated_amount < (self.base_paid_amount - total_deductions) \
 				and self.total_allocated_amount < self.received_amount + (total_deductions / self.target_exchange_rate):
-					self.unallocated_amount = (self.base_paid_amount - (total_deductions +
-						self.base_total_allocated_amount)) / self.target_exchange_rate
+				self.unallocated_amount = (self.base_paid_amount - (total_deductions +
+					self.base_total_allocated_amount)) / self.target_exchange_rate
 
 	def set_difference_amount(self):
 		base_unallocated_amount = flt(self.unallocated_amount) * (flt(self.source_exchange_rate)
@@ -1007,7 +1011,7 @@ def get_payment_entry(dt, dn, party_amount=None, bank_account=None, bank_amount=
 		party_account_currency = doc.get("party_account_currency") or get_account_currency(party_account)
 
 	# payment type
-	if (dt == "Sales Order" or (dt in ("Sales Invoice", "Fees") and doc.outstanding_amount > 0)) \
+	if (dt == "Sales Order" or (dt in ("Sales Invoice", "Fees") and doc.outstanding_amount >= 0)) \
 		or (dt=="Purchase Invoice" and doc.outstanding_amount < 0):
 			payment_type = "Receive"
 	else:
