@@ -190,7 +190,7 @@ class TestStockEntry(unittest.TestCase):
 		create_stock_reconciliation(qty=100, rate=100)
 
 		mtn = make_stock_entry(item_code="_Test Item", source="Stores - TCP1",
-			target="Finished Goods - TCP1", qty=45)
+			target="Finished Goods - TCP1", qty=45, expense_account="Stock In Hand - TCP1")
 
 		self.check_stock_ledger_entries("Stock Entry", mtn.name,
 			[["_Test Item", "Stores - TCP1", -45.0], ["_Test Item", "Finished Goods - TCP1", 45.0]])
@@ -738,9 +738,10 @@ class TestStockEntry(unittest.TestCase):
 			'_Test Serialized Item With Series': 6.0
 		}
 
-		stock_entry = frappe.get_doc(_make_stock_entry(work_order.name, "Material Consumption for Manufacture", 2))
+		stock_entry = frappe.get_doc(_make_stock_entry(work_order.name, "Material Consumption for Manufacture", 10))
 		for d in stock_entry.get('items'):
-			self.assertEqual(item_quantity.get(d.item_code), d.qty)
+			if(item_quantity.get(d.item_code)):
+				self.assertEqual(item_quantity.get(d.item_code), d.qty)
 
 	def test_customer_provided_parts_se(self):
 		create_item('CUST-0987', is_customer_provided_item = 1, customer = '_Test Customer', is_purchase_item = 0)
