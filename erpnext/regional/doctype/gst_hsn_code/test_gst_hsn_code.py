@@ -6,6 +6,5 @@ from __future__ import unicode_literals
 import frappe
 import unittest
 
-test_dependencies = ['Warehouse']
 class TestGSTHSNCode(unittest.TestCase):
 	pass
