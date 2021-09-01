@@ -504,6 +504,8 @@ class TestAsset(unittest.TestCase):
 			'rate': 5.0
 		}])
 
+		frappe.db.set_value("Asset Category", "Computers", "enable_cwip_accounting", 1)
+
 		pr.submit()
 
 		expected_gle = (
@@ -714,6 +716,7 @@ def create_fixed_asset_item():
 			"stock_uom": "Nos",
 			"is_stock_item": 0,
 			"is_fixed_asset": 1,
+			"is_sales_item": 1,
 			"auto_create_assets": 1,
 			"asset_naming_series": naming_series
 		}).insert()

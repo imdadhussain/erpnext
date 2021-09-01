@@ -35,7 +35,7 @@ class TestEmployeeOnboarding(unittest.TestCase):
 		self.assertEqual(onboarding.project, 'Employee Onboarding : Test Researcher - test@researcher.com')
 
 		# don't allow making employee if onboarding is not complete
-		self.assertRaises(IncompleteTaskError, make_employee, onboarding.name)
+		self.assertRaises(IncompleteTaskError, onboarding.validate_employee_creation)
 
 		# complete the task
 		project = frappe.get_doc('Project', onboarding.project)
@@ -48,11 +48,12 @@ class TestEmployeeOnboarding(unittest.TestCase):
 		onboarding.reload()
 		employee = make_employee(onboarding.name)
 		employee.first_name = employee.employee_name
+		employee.last_name = "Doe"
 		employee.date_of_joining = nowdate()
 		employee.date_of_birth = '1990-05-08'
 		employee.gender = 'Female'
 		employee.insert()
-		self.assertEqual(employee.employee_name, 'Test Researcher')
+		self.assertEqual(employee.employee_name, 'Test Researcher Doe')
 
 def get_job_applicant():
 	if frappe.db.exists('Job Applicant', 'Test Researcher - test@researcher.com'):
