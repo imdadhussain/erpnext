@@ -23,8 +23,12 @@ class TestProductConfigurator(unittest.TestCase):
 		products_settings.append('filter_fields', {'fieldname': 'stock_uom'})
 		products_settings.save()
 
-		html = get_html_for_route('all-products')
+		doc = frappe.get_doc('Products Settings')
+		doc.products_per_page = 20
+		doc.save()
 
+		html = get_html_for_route('all-products')
+		
 		soup = BeautifulSoup(html, 'html.parser')
 		products_list = soup.find(class_='products-list')
 		items = products_list.find_all(class_='card')
@@ -52,9 +56,9 @@ class TestProductConfigurator(unittest.TestCase):
 
 
 	def create_variant_item(self):
-		if not frappe.db.exists('Item', '_Test Variant Item 1'):
+		if not frappe.db.exists('Item', 'Test Variant PRT'):
 			frappe.get_doc({
-				"description": "_Test Variant Item 12",
+				"description": "_Test Variant Item 1",
 				"doctype": "Item",
 				"is_stock_item": 1,
 				"variant_of": "_Test Variant Item",
