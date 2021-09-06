@@ -90,7 +90,7 @@ class TestStockReconciliation(unittest.TestCase):
 	def test_get_items(self):
 		from erpnext.stock.doctype.stock_entry.test_stock_entry import make_stock_entry
 
-		create_warehouse("_Test Warehouse Group 1", {"is_group": 1})
+		create_warehouse("_Test Warehouse Group 1", {"is_group": 0})
 		create_warehouse("_Test Warehouse Ledger 1",
 			{"is_group": 0, "parent_warehouse": "_Test Warehouse Group 1 - _TC"})
 
