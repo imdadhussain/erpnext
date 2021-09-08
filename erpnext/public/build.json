@@ -57,7 +57,8 @@
 		"public/js/call_popup/call_popup.js",
 		"public/js/utils/dimension_tree_filter.js",
 		"public/js/utils/card_validator.js",
-		"public/js/utils/bloombrackets_widget.js"
+		"public/js/utils/bloombrackets_widget.js",
+		"public/js/banner.js"
 	],
 	"js/item-dashboard.min.js": [
 		"stock/dashboard/item_dashboard.html",
