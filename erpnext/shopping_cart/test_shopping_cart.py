@@ -107,8 +107,7 @@ class TestShoppingCart(unittest.TestCase):
 		if not frappe.db.count("Tax Rule"):
 			frappe.set_user("Administrator")
 			from erpnext.accounts.doctype.tax_rule.test_tax_rule import make_tax_rule
-			make_tax_rule(customer=quotation.party_name, company=quotation.company,\
-				use_for_shopping_cart=1, save=True, sales_tax_template="_Test Tax 1 - _TC")
+			make_tax_rule(customer=quotation.party_name, company=quotation.company, use_for_shopping_cart=1, save=True, sales_tax_template="_Test Tax 1 - _TC")
 
 		from erpnext.accounts.party import set_taxes
 		tax_rule_master = set_taxes(quotation.party_name, "Customer",
