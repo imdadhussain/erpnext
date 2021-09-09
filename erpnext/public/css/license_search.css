@@ -94,7 +94,7 @@ ul.paginate {
 
 .license-filter .search-box input,
 .license-filter .zip-box input {
-  background: url('/assets/bloomstack_core/images/search.png') no-repeat;
+  background: url('/assets/erpnext/images/search.png') no-repeat;
   background-position: center right;
   padding: 5px 8px;
 }
