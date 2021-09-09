@@ -159,4 +159,4 @@ class TestPlaidSettings(unittest.TestCase):
 		if not frappe.db.exists("Account","Citi-Plaid Checking - WP"):
 			add_bank_accounts(response=bank_accounts, bank=bank, company=company)
 
-		self.assertRaises(frappe.ValidationError, add_bank_accounts, response=bank_accounts, bank=bank, company=company)
+		self.assertRaises(frappe.exceptions.ValidationError, add_bank_accounts, response=bank_accounts, bank=bank, company=company)
