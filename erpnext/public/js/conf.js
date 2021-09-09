@@ -165,7 +165,7 @@ erpnext.add_login_as_button = (frm, label, user, submenu) => {
 				if (user_doc) {
 					frm.add_custom_button(label, () => {
 						frappe.call({
-							method: "bloomstack_core.utils.login_as",
+							method: "eprnext.utils.login_as",
 							args: { user: user },
 							freeze: true,
 							callback: (data) => {
