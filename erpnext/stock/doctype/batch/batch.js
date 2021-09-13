@@ -58,7 +58,7 @@ frappe.ui.form.on('Batch', {
 				},
 				function (data) {
 					frappe.model.open_mapped_doc({
-						method: "bloomstack_core.utils.move_expired_batches",
+						method: "eprnext.utils.move_expired_batches",
 						frm: frm,
 						args: {
 							warehouse: data.warehouse
