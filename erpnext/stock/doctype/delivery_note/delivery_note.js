@@ -90,9 +90,7 @@ frappe.ui.form.on("Delivery Note", {
 			}, __('Create'));
 			frm.page.set_inner_btn_group_as_primary(__('Create'));
 		}
-	},
 
-	refresh: (frm) => {
 		if (frm.doc.is_return) {
 			// Default all returns to be issued with credit notes
 			frm.doc.issue_credit_note = 1;
