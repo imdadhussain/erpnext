@@ -60,6 +60,6 @@ frappe.listview_settings['Purchase Invoice'].onload =
 					}
 				});
 			}
-		}
+		};
 		doclist.page.add_actions_menu_item(__('Email'), action, true);
-	}
+	};
