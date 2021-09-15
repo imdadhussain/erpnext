@@ -53,3 +53,4 @@ def create_authorization_request(dt, dn, contact_email, contact_name):
 	new_authorization_request.authorizer_email = contact_email
 	new_authorization_request.authorizer_name = contact_name
 	new_authorization_request.save()
+
