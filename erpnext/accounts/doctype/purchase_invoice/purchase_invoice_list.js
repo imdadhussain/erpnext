@@ -39,8 +39,8 @@ frappe.listview_settings['Purchase Invoice'].onload =
 					}
 					if (doc.title !== title) {
 						frappe.throw(__("Select only one Supplier's purchase invoice"))
-					}
-				};
+					};
+				}
 				frappe.call({
 					method: "erpnext.utils.get_contact",
 					args: { "doctype": doctype, "name": selected_docs[0].name, "contact_field": "supplier" },
@@ -54,9 +54,9 @@ frappe.listview_settings['Purchase Invoice'].onload =
 									recipients: r.message ? r.message.email_id : null,
 									message: res.message,
 									doc: {}
-								})
+								});
 							}
-						})
+						});
 					}
 				})
 			}
