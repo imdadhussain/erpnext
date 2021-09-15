@@ -2,7 +2,6 @@ import json
 import frappe
 from frappe.utils import get_url
 
-
 @frappe.whitelist()
 def get_contact(doctype, name, contact_field):
 
