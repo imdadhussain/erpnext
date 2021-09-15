@@ -66,7 +66,6 @@ frappe.ui.form.on('Batch', {
 			});
 		}
 	},
-
 	make_material_request: function (frm) {
 		frappe.model.open_mapped_doc({
 			method: "erpnext.stock.doctype.material_request.material_request.make_material_request",
