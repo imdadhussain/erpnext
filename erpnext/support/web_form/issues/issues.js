@@ -45,7 +45,7 @@ frappe.ready(function() {
 					frappe.confirm(__("Are you sure you want to close this Issue?"), function () {
 						frappe.web_form.doc.status = 'Closed';
 						frappe.web_form.save();
-					})
+					});
 				});
 			}
 		});
