@@ -28,7 +28,7 @@ frappe.ready(function() {
 							d.hide();
 							$('#comment-form').show();
 							$('.add-comment.btn').hide();
-							data = d.get_values();
+							let data = d.get_values();
 							$("#comment-form [name='comment_by']").val(frappe.full_name);
 							$("#comment-form [name='comment_email']").val(frappe.user_id);
 							$("#comment-form [name='comment']").append(data.comment);
