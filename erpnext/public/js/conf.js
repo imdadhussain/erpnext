@@ -13,7 +13,7 @@ $(document).bind('toolbar_setup', function() {
 
 	$('.navbar-home').empty().append($logo);
 
-	//////////////////////////////////////////////////
+	// ////////////////////////////////////////////////
 	// BUILDING THE HELP MENU
 
 	const $article_links = $(".dropdown-help #help-links");
@@ -21,7 +21,7 @@ $(document).bind('toolbar_setup', function() {
 
 	// link to BCC laws and regulations
 	const $bcc_site = $(`<li><a href="https://bcc.ca.gov/law_regs/" target="_blank">${__('BCC Guidelines')}</a></li>`)
-		.insertAfter($help_menu)
+		.insertAfter($help_menu);
 
 	// replace Report Issue menu item
 	const $report_issue_menu_item = $(`<li><a href="https://bloomstack.com/issues" target="_blank">${__('Contact Support')}</a></li>`)
@@ -38,7 +38,7 @@ $(document).bind('toolbar_setup', function() {
 		.not($keyboard_shortcuts)
 		.remove();
 
-	//////////////////////////////////////////////////
+	// ////////////////////////////////////////////////
 
 	function report_issue() {
 		// adds erpnext email filter guard... cause... paranoid... :D
@@ -101,7 +101,7 @@ $(document).on("page-change", () => {
 	const [view, doc_type, doc_name] = frappe.get_route();
 
 	erpnext.update_item_column_label(view, doc_type);
-})
+});
 
 // replace Item link field label throughout the system from
 // "item_code: item_name" to "item_name: item_code";
@@ -114,7 +114,7 @@ frappe.form.link_formatters['Item'] = (value, doc) => {
 	} else {
 		return value;
 	}
-}
+};
 
 erpnext.update_item_column_label = (view, doc_type) => {
 	if (view == "Form" && doc_type) {
@@ -124,7 +124,7 @@ erpnext.update_item_column_label = (view, doc_type) => {
 			}
 		});
 	}
-}
+};
 
 erpnext.add_login_as_button = (frm, label, user, submenu) => {
 	// only one of these roles is allowed to use these feature
@@ -151,13 +151,13 @@ erpnext.add_login_as_button = (frm, label, user, submenu) => {
 							callback: (data) => {
 								window.location = "/desk";
 							}
-						})
+						});
 					}, submenu);
 				}
 			}
-		})
+		});
 	}
-}
+};
 
 function update_link_column_label(frm, link_doctype, label) {
 	const table_doctypes = frappe.meta.get_table_fields(frm.doc.doctype)
