@@ -564,8 +564,7 @@ def get_subitems(doc, data, item_details, bom_no, company, include_non_stock_ite
 				if d.qty > 0:
 					get_subitems(doc, data, item_details, d.default_bom, company,
 						include_non_stock_items, include_subcontracted_items, d.qty)
-		if sales_order:
-			item_details['sales_order'] = sales_order
+		item_details['sales_order'] = sales_order if sales_order else ""
 	return item_details
 
 def get_material_request_items(row, sales_order,
