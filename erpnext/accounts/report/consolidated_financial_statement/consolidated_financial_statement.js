@@ -13,19 +13,31 @@ frappe.query_reports["Consolidated Financial Statement"] = {
 			"reqd": 1
 		},
 		{
-			"fieldname":"from_fiscal_year",
-			"label": __("Start Year"),
-			"fieldtype": "Link",
-			"options": "Fiscal Year",
-			"default": frappe.defaults.get_user_default("fiscal_year"),
+			"fieldname": "from_date",
+			"label": __("From Date"),
+			"fieldtype": "Date",
+			"default": frappe.defaults.get_user_default("year_start_date"),
 			"reqd": 1
 		},
 		{
-			"fieldname":"to_fiscal_year",
-			"label": __("End Year"),
-			"fieldtype": "Link",
-			"options": "Fiscal Year",
-			"default": frappe.defaults.get_user_default("fiscal_year"),
+			"fieldname": "to_date",
+			"label": __("To Date"),
+			"fieldtype": "Date",
+			"default": frappe.defaults.get_user_default("year_end_date"),
+			"reqd": 1
+		},
+		{
+			"fieldname": "periodicity",
+			"label": __("Periodicity"),
+			"fieldtype": "Select",
+			"options": [
+				{ "value": "Custom", "label": __("Custom Date Range") },
+				{ "value": "Monthly", "label": __("Monthly") },
+				{ "value": "Quarterly", "label": __("Quarterly") },
+				{ "value": "Half-Yearly", "label": __("Half-Yearly") },
+				{ "value": "Yearly", "label": __("Yearly") }
+			],
+			"default": "Yearly",
 			"reqd": 1
 		},
 		{
@@ -60,6 +72,39 @@ frappe.query_reports["Consolidated Financial Statement"] = {
 			"label": __("Include Default Book Entries"),
 			"fieldtype": "Check",
 			"default": 1
-		}
+		},
+		{
+			"fieldname":"company_a",
+			"label": __("To Company"),
+			"fieldtype": "Link",
+			"options": "Company",
+			"hidden": 1,
+			"reqd": 1
+		},
+		{
+			"fieldname":"compare_with_company",
+			"label": __("Compare Statements"),
+			"fieldtype": "Check",
+			"default": 0,
+			on_change: () => {
+				var compare_with_company = frappe.query_report.get_filter_value('compare_with_company');
+				console.log("WITH COMPANY")
+				console.log(compare_with_company)
+				if (compare_with_company) {
+						frappe.query_report.set_filter_value('with_company', "hidden", 0);
+					};
+					frappe.query_report.refresh();
+			},
+
+		},
+		{
+			"fieldname":"company_b",
+			"label": __("from Company"),
+			"fieldtype": "Link",
+			"options": "Company",
+			"hidden": 1,
+			"reqd": 1
+		},
+		
 	]
 }
