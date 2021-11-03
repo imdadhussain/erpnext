@@ -7,7 +7,7 @@ from frappe import _
 from frappe.utils import flt, cint, getdate
 from erpnext.accounts.utils import get_fiscal_year
 from erpnext.accounts.report.utils import get_currency, convert_to_presentation_currency
-from erpnext.accounts.report.financial_statements import get_fiscal_year_data, sort_accounts,get_period_list, get_data
+from erpnext.accounts.report.financial_statements import get_fiscal_year_data, sort_accounts,get_period_list
 from erpnext.accounts.report.balance_sheet.balance_sheet import (get_provisional_profit_loss,
 	check_opening_balance, get_chart_data)
 from erpnext.accounts.report.profit_and_loss_statement.profit_and_loss_statement import (get_net_profit_loss,
@@ -47,30 +47,19 @@ def execute(filters=None):
 def get_balance_sheet_data(period_list, companies, columns, filters, cost_center_wise=False):
 
 	data = []
-	# companies_data_assets = {}
-	# companies_data_liability = {}
-	# companies_data_equilty = {}
-	# for company in companies:
-	# 	companies_data_assets[company] = get_argument_dict("Asset", "Debit", period_list, filters)
-	# 	companies_data_liability[company] = get_argument_dict("Liability", "Credit", period_list, filters)
-	# 	companies_data_equilty[company] = get_argument_dict("Equity", "Credit", period_list, filters)
-	
-	# asset = get_multi_company_data(companies_data_assets)
+	asset = get_data(companies, "Asset", "Debit", period_list, filters=filters, cost_center_wise=cost_center_wise)
 
+	liability = get_data(companies, "Liability", "Credit", period_list, filters=filters, cost_center_wise=cost_center_wise)
 
-	asset = get_data(filters.company, "Asset", "Debit", period_list, filters=filters, accumulated_values=filters.accumulated_in_group_company)
-
-	liability = get_data(filters.company, "Liability", "Credit", period_list, filters=filters, accumulated_values=filters.accumulated_in_group_company)
-
-	equity = get_data(filters.company, "Equity", "Credit", period_list, filters=filters, accumulated_values=filters.accumulated_in_group_company)
-
+	equity = get_data(companies, "Equity", "Credit", period_list, filters=filters, cost_center_wise=cost_center_wise)
 	data.extend(asset or [])
 	data.extend(liability or [])
 	data.extend(equity or [])
 
 	company_currency = get_company_currency(filters)
-	provisional_profit_loss, total_credit = get_provisional_profit_loss(asset, liability, equity, period_list, filters.company, company_currency, False)
 
+	provisional_profit_loss, total_credit = get_provisional_profit_loss(asset, liability, equity,
+		period_list, filters.get('company'), company_currency, False)
 	message, opening_balance = check_opening_balance(asset, liability, equity)
 
 	if opening_balance and round(opening_balance,2) !=0:
@@ -80,18 +69,17 @@ def get_balance_sheet_data(period_list, companies, columns, filters, cost_center
 			"warn_if_negative": True,
 			"currency": company_currency
 		}
-		for period in period_list:
-			unclosed[period.key] = opening_balance
+		# for period in period_list:
+		# 	unclosed[period.key] = opening_balance
+		# 	if provisional_profit_loss:
+		# 		provisional_profit_loss[period.key] = provisional_profit_loss[period.key] - opening_balance
+		# unclosed["total"]=opening_balance
+
+		for company in companies:
+			unclosed[company] = opening_balance
 			if provisional_profit_loss:
-				provisional_profit_loss[period.key] = provisional_profit_loss[period.key] - opening_balance
+				provisional_profit_loss[company] = provisional_profit_loss[company] - opening_balance
 		unclosed["total"]=opening_balance
-
-	# 	# for company in companies:
-	# 	# 	unclosed[company] = opening_balance
-	# 	# 	if provisional_profit_loss:
-	# 	# 		provisional_profit_loss[company] = provisional_profit_loss[company] - opening_balance
-
-	# 	unclosed["total"]=opening_balance
 		data.append(unclosed)
 
 	if provisional_profit_loss:
@@ -101,18 +89,7 @@ def get_balance_sheet_data(period_list, companies, columns, filters, cost_center
 
 	chart = get_chart_data(filters, columns, asset, liability, equity)
 
-	print("DATA-----", data)
-
 	return data, message, chart
-
-def get_argument_dict(root_type, balance_must_be, period_list, filters):
-	return {
-			"root_type": root_type,
-			"balance_must_be": balance_must_be, 
-			"period_list" : period_list , 
-			"filters": filters, 
-			"accumulated_values": filters.accumulated_in_group_company or False
-			}
 
 
 def get_profit_loss_data(fiscal_year, companies, columns, filters, cost_center_wise=False):
@@ -225,26 +202,27 @@ def get_columns(companies, periodicity, period_list, accumulated_in_group_compan
 	# 		"options": "currency",
 	# 		"width": 150
 	# 	})
-	for period in period_list:
-		columns.append({
-			"fieldname": period.key,
-			"label": period.label,
-			"fieldtype": "Currency",
-			"options": "currency",
-			"width": 150
-		})
-	if periodicity!="Yearly":
-		if not accumulated_in_group_company:
+	for company in companies:
+		for period in period_list:
 			columns.append({
-				"fieldname": "total",
-				"label": _("Total"),
+				"fieldname": f'{company.lower()}_{period.key}',
+				"label": f'{company} {period.label}',
 				"fieldtype": "Currency",
+				"options": "currency",
 				"width": 150
 			})
-	print("Columns", columns)
+		if periodicity!="Yearly":
+			if not accumulated_in_group_company:
+				columns.append({
+					"fieldname": "total",
+					"label": f'{company} Total',
+					"fieldtype": "Currency",
+					"width": 150
+				})
+
 	return columns
 
-def get_datas(companies, root_type, balance_must_be, fiscal_year, filters=None, ignore_closing_entries=False, cost_center_wise=False):
+def get_data(companies, root_type, balance_must_be, period_list, filters=None, ignore_closing_entries=False, cost_center_wise=False):
 	accounts, accounts_by_name = get_account_heads(root_type,
 		companies, filters)
 
@@ -256,13 +234,14 @@ def get_datas(companies, root_type, balance_must_be, fiscal_year, filters=None, 
 	for root in frappe.db.sql("""select lft, rgt from tabAccount
 			where root_type=%s and ifnull(parent_account, '') = ''""", root_type, as_dict=1):
 
-		set_gl_entries_by_account(fiscal_year.get("year_start_date"),
-			fiscal_year.get("year_end_date"), root.lft, root.rgt, filters,
+		set_gl_entries_by_account(
+			period_list[0]["year_start_date"],
+			period_list[-1]["to_date"], root.lft, root.rgt, filters,
 			gl_entries_by_account, accounts_by_name, ignore_closing_entries=False)
 
-	calculate_values(accounts_by_name, gl_entries_by_account, companies, fiscal_year, filters, cost_center_wise=cost_center_wise)
+	calculate_values(accounts_by_name, gl_entries_by_account, companies, period_list, filters, cost_center_wise=cost_center_wise)
 	accumulate_values_into_parents(accounts, accounts_by_name, companies)
-	out = prepare_data(accounts, fiscal_year, balance_must_be, companies, company_currency)
+	out = prepare_data(accounts, period_list, balance_must_be, companies, company_currency)
 
 	if out:
 		add_total_row(out, root_type, balance_must_be, companies, company_currency)
@@ -273,7 +252,7 @@ def get_company_currency(filters=None):
 	return (filters.get('presentation_currency')
 		or frappe.get_cached_value('Company',  filters.company,  "default_currency"))
 
-def calculate_values(accounts_by_name, gl_entries_by_account, companies, fiscal_year, filters, cost_center_wise=False):
+def calculate_values(accounts_by_name, gl_entries_by_account, companies, period_list, filters, cost_center_wise=False):
 	for entries in gl_entries_by_account.values():
 		for entry in entries:
 			key = entry.account_number or entry.account_name
@@ -281,17 +260,26 @@ def calculate_values(accounts_by_name, gl_entries_by_account, companies, fiscal_
 			if d:
 				for company in companies:
 					# check if posting date is within the period
-					if (cost_center_wise):
-						if (entry.cost_center == company or (filters.get('accumulated_in_group_company'))
-							and entry.cost_center in companies.get(company)):
-							d[company] = d.get(company, 0.0) + flt(entry.debit) - flt(entry.credit)
-					else:
-						if (entry.company == company or (filters.get('accumulated_in_group_company'))
-							and entry.company in companies.get(company)):
-							d[company] = d.get(company, 0.0) + flt(entry.debit) - flt(entry.credit)
+					company_key = company.lower()
+					#company_value = f'{company_key}_value'
+					company_value = 0.0
+					for period in period_list:
+						if entry.posting_date <= period.to_date:
+							if (cost_center_wise):
+								if (entry.cost_center == company or (filters.get('accumulated_in_group_company'))
+									and entry.cost_center in companies.get(company)):
+									d[f'{company_key}_{period.key}'] = company_value + flt(entry.debit) - flt(entry.credit)
+									company_value = d[f'{company_key}_{period.key}']
+									d[company] = company_value 
+							else:
+								if (entry.company == company or (filters.get('accumulated_in_group_company'))
+									and entry.company in companies.get(company)):
+									d[f'{company_key}_{period.key}'] = company_value + flt(entry.debit) - flt(entry.credit)
+									company_value = d[f'{company_key}_{period.key}']
+									d[company] = company_value
 
-				if getdate(entry.posting_date) < getdate(fiscal_year.get("year_start_date")):
-					d["opening_balance"] = d.get("opening_balance", 0.0) + flt(entry.debit) - flt(entry.credit)
+					if getdate(entry.posting_date) < period_list[0].year_start_date:
+						d["opening_balance"] = d.get("opening_balance", 0.0) + flt(entry.debit) - flt(entry.credit)
 
 def accumulate_values_into_parents(accounts, accounts_by_name, companies):
 	"""accumulate children's values in parent accounts"""
@@ -344,10 +332,12 @@ def get_accounts(root_type, filters):
 			`tabAccount` where company = %s and root_type = %s
 		""" , (filters.get('company'), root_type), as_dict=1)
 
-def prepare_data(accounts, fiscal_year, balance_must_be, companies, company_currency):
+def prepare_data(accounts, period_list, balance_must_be, companies, company_currency):
 	data = []
-	year_start_date = fiscal_year.get("year_start_date")
-	year_end_date = fiscal_year.get("year_end_date")
+	#year_start_date = fiscal_year.get("year_start_date")
+	#year_end_date = fiscal_year.get("year_end_date")
+	year_start_date = period_list[0]["year_start_date"].strftime("%Y-%m-%d")
+	year_end_date = period_list[-1]["year_end_date"].strftime("%Y-%m-%d")
 
 	for d in accounts:
 		# add to output
@@ -364,16 +354,31 @@ def prepare_data(accounts, fiscal_year, balance_must_be, companies, company_curr
 			"opening_balance": d.get("opening_balance", 0.0) * (1 if balance_must_be == "Debit" else -1)
 		})
 		for company in companies:
-			if d.get(company) and balance_must_be == "Credit":
-				# change sign based on Debit or Credit, since calculation is done using (debit - credit)
-				d[company] *= -1
+			company_key = company.lower()
+			
+			for period in period_list:
+				period_key = f'{company_key}_{period.key}'
 
-			row[company] = flt(d.get(company, 0.0), 3)
+				if d.get(period_key) and balance_must_be == "Credit":
+					d[period_key] *= -1
 
-			if abs(row[company]) >= 0.005:
-				# ignore zero values
-				has_value = True
-				total += flt(row[company])
+				row[period_key] = flt(d.get(period_key, 0.0), 3)
+
+				#ignore zero values
+				if abs(row[period_key]) >= 0.005:
+					has_value = True
+					total += flt(row[period_key])
+
+			# if d.get(company) and balance_must_be == "Credit":
+			# 	# change sign based on Debit or Credit, since calculation is done using (debit - credit)
+			# 	d[company] *= -1
+
+			# row[company] = flt(d.get(company, 0.0), 3)
+
+			# if abs(row[company]) >= 0.005:
+			# 	# ignore zero values
+			# 	has_value = True
+			# 	total += flt(row[company])
 
 		row["has_value"] = has_value
 		row["total"] = total
@@ -498,13 +503,3 @@ def filter_accounts(accounts, depth=10):
 	add_to_list(None, 0)
 
 	return filtered_accounts, accounts_by_name, parent_children_map
-
-
-def get_multi_company_data(companies_data):
-	print("MUltiple")
-	from pprint import pprint
-	for company,args in companies_data.items():
-		print(company)
-		_args = frappe._dict(args)
-		d = get_data(company, _args.root_type, _args.balance_must_be, _args.period_list, _args.filters,_args.accumulated_values)
-		print(d)

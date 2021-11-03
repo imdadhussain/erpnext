@@ -74,12 +74,42 @@ frappe.query_reports["Consolidated Financial Statement"] = {
 			"default": 1
 		},
 		{
-			"fieldname":"company_a",
+			"fieldname":"from_company",
+			"label": __("From Company"),
+			"fieldtype": "Link",
+			"options": "Company",
+			"hidden": 1,
+			"reqd": 0,
+			get_query: function () {
+				var company = frappe.query_report.get_filter_value("company");
+				company_list =  {
+					doctype: "Company",
+					filters: {
+						"is_group": 0,
+						"parent_company": company,
+					},
+				};
+				return company_list
+			},
+		},
+		{
+			"fieldname":"to_company",
 			"label": __("To Company"),
 			"fieldtype": "Link",
 			"options": "Company",
 			"hidden": 1,
-			"reqd": 1
+			"reqd": 0,
+			get_query: function () {
+				var company = frappe.query_report.get_filter_value("company");
+				company_list =  {
+					doctype: "Company",
+					filters: {
+						"is_group": 0,
+						"parent_company": company,
+					},
+				};
+				return company_list
+			},
 		},
 		{
 			"fieldname":"compare_with_company",
@@ -87,24 +117,13 @@ frappe.query_reports["Consolidated Financial Statement"] = {
 			"fieldtype": "Check",
 			"default": 0,
 			on_change: () => {
-				var compare_with_company = frappe.query_report.get_filter_value('compare_with_company');
-				console.log("WITH COMPANY")
-				console.log(compare_with_company)
-				if (compare_with_company) {
-						frappe.query_report.set_filter_value('with_company', "hidden", 0);
-					};
-					frappe.query_report.refresh();
+				let filter_based_on = frappe.query_report.get_filter_value('compare_with_company');
+				frappe.query_report.toggle_filter_display('from_company', filter_based_on === 0);
+				frappe.query_report.toggle_filter_display('to_company', filter_based_on === 0);
+				frappe.query_report.refresh();
 			},
 
-		},
-		{
-			"fieldname":"company_b",
-			"label": __("from Company"),
-			"fieldtype": "Link",
-			"options": "Company",
-			"hidden": 1,
-			"reqd": 1
-		},
+		}
 		
 	]
 }
