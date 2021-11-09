@@ -214,7 +214,8 @@ def get_columns(companies, periodicity, period_list, accumulated_in_group_compan
 		if periodicity!="Yearly":
 			if not accumulated_in_group_company:
 				columns.append({
-					"fieldname": "total",
+					#"fieldname": "total",
+					"fieldname": f"{company.lower()}_total",
 					"label": f'{company} Total',
 					"fieldtype": "Currency",
 					"width": 150
@@ -244,7 +245,7 @@ def get_data(companies, root_type, balance_must_be, period_list, filters=None, i
 	out = prepare_data(accounts, period_list, balance_must_be, companies, company_currency)
 
 	if out:
-		add_total_row(out, root_type, balance_must_be, companies, company_currency)
+		add_total_row(out, root_type, balance_must_be, companies, company_currency, period_list)
 
 	return out
 
@@ -270,13 +271,13 @@ def calculate_values(accounts_by_name, gl_entries_by_account, companies, period_
 									and entry.cost_center in companies.get(company)):
 									d[f'{company_key}_{period.key}'] = company_value + flt(entry.debit) - flt(entry.credit)
 									company_value = d[f'{company_key}_{period.key}']
-									d[company] = company_value 
+									d[company] = d.get(company, 0.0) + company_value
 							else:
 								if (entry.company == company or (filters.get('accumulated_in_group_company'))
 									and entry.company in companies.get(company)):
 									d[f'{company_key}_{period.key}'] = company_value + flt(entry.debit) - flt(entry.credit)
 									company_value = d[f'{company_key}_{period.key}']
-									d[company] = company_value
+									d[company] = d.get(company, 0.0) + company_value
 
 					if getdate(entry.posting_date) < period_list[0].year_start_date:
 						d["opening_balance"] = d.get("opening_balance", 0.0) + flt(entry.debit) - flt(entry.credit)
@@ -355,7 +356,7 @@ def prepare_data(accounts, period_list, balance_must_be, companies, company_curr
 		})
 		for company in companies:
 			company_key = company.lower()
-			
+			total = 0
 			for period in period_list:
 				period_key = f'{company_key}_{period.key}'
 
@@ -380,8 +381,9 @@ def prepare_data(accounts, period_list, balance_must_be, companies, company_curr
 			# 	has_value = True
 			# 	total += flt(row[company])
 
-		row["has_value"] = has_value
-		row["total"] = total
+			row["has_value"] = has_value
+			row["total"] = total
+			row[f"{company.lower()}_total"] = total
 		data.append(row)
 
 	return data
@@ -456,7 +458,7 @@ def get_additional_conditions(from_date, ignore_closing_entries, filters):
 
 	return " and {}".format(" and ".join(additional_conditions)) if additional_conditions else ""
 
-def add_total_row(out, root_type, balance_must_be, companies, company_currency):
+def add_total_row(out, root_type, balance_must_be, companies, company_currency, period_list):
 	total_row = {
 		"account_name": "'" + _("Total {0} ({1})").format(_(root_type), _(balance_must_be)) + "'",
 		"account": "'" + _("Total {0} ({1})").format(_(root_type), _(balance_must_be)) + "'",
@@ -473,6 +475,18 @@ def add_total_row(out, root_type, balance_must_be, companies, company_currency):
 			total_row.setdefault("total", 0.0)
 			total_row["total"] += flt(row["total"])
 			row["total"] = ""
+			# company_key = company.lower()
+			# for period in period_list:
+			# 	#row[f'{company_key}_{period.key}'] = row.get(f'{company_key}_{period.key}', 0.0)
+			# 	#row[period.key] = row.get(period.key, 0.0)
+			# 	total_row.setdefault(f'{company_key}_{period.key}', 0.0)
+			# 	total_row[f'{company_key}_{period.key}'] += row.get(f'{company_key}_{period.key}', 0.0)
+			# 	#create total values for all the periods
+			# total_row.setdefault(f'{company_key}_total', 0.0)
+			# total_row[f'{company_key}_total'] += flt(row[f'{company_key}_total'])
+			# print(row)
+			# print(total_row)
+			# #break
 
 	if "total" in total_row:
 		out.append(total_row)

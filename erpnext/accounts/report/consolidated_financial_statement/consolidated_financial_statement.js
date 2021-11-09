@@ -62,6 +62,16 @@ frappe.query_reports["Consolidated Financial Statement"] = {
 			"default": frappe.defaults.get_user_default("Currency")
 		},
 		{
+			"fieldname": "cost_center",
+			"label": __("Cost Center"),
+			"fieldtype": "MultiSelectList",
+			get_data: function(txt) {
+				return frappe.db.get_link_options('Cost Center', txt, {
+					company: frappe.query_report.get_filter_value("company")
+				});
+			}
+		},
+		{
 			"fieldname":"accumulated_in_group_company",
 			"label": __("Accumulated Values in Group Company"),
 			"fieldtype": "Check",
