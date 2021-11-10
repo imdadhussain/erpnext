@@ -21,11 +21,14 @@ def execute(filters=None):
 	if not filters.get('company'):
 		return columns, data, message, chart
 
+	if filters.get('compare_with_company') and not (filters.from_company or filters.to_company):
+		frappe.msgprint(_("Please select From Company  and To Company"));
+
 	period_list = get_period_list(filters.from_date, filters.to_date,
 		filters.periodicity, filters.accumulated_in_group_company)
 
 	companies_column, companies = get_companies(filters)
-	columns = get_columns(companies_column, filters.periodicity, period_list,filters.accumulated_in_group_company)
+	columns = get_columns(companies_column, filters.periodicity, period_list, filters,filters.accumulated_in_group_company)
 
 	if filters.get('report') == "Balance Sheet":
 		data, message, chart = get_balance_sheet_data(period_list, companies, columns, filters)
@@ -55,7 +58,7 @@ def get_balance_sheet_data(period_list, companies, columns, filters, cost_center
 	company_currency = get_company_currency(filters)
 
 	provisional_profit_loss, total_credit = get_provisional_profit_loss(asset, liability, equity,
-		period_list, filters.get('company'), company_currency, False)
+		period_list, filters.get('company'), companies, company_currency, True)
 	message, opening_balance = check_opening_balance(asset, liability, equity)
 
 	if opening_balance and round(opening_balance,2) !=0:
@@ -173,7 +176,7 @@ def get_account_type_based_data(account_type, companies, period_list, filters):
 	data["total"] = total
 	return data
 
-def get_columns(companies, periodicity, period_list, accumulated_in_group_company=1):
+def get_columns(companies, periodicity, period_list, filters, accumulated_in_group_company=1):
 	columns = [{
 		"fieldname": "account",
 		"label": _("Account"),
@@ -191,20 +194,47 @@ def get_columns(companies, periodicity, period_list, accumulated_in_group_compan
 	})
 
 	for company in companies:
-		for period in period_list:
-			columns.append({
-				"fieldname": f'{company}({period.key})',
-				"label": f'{company}({period.label})',
-				"fieldtype": "Currency",
-				"options": "currency",
-				"width": 150
-			})
-		if periodicity!="Yearly":
-			if not accumulated_in_group_company:
+		if filters.get('compare_with_company') and filters.from_company and filters.to_company:
+				if filters.from_company == company or filters.to_company == company:
+					for period in period_list:
+						columns.append({
+							"fieldname": f'{company}({period.key})',
+							"label": f'{company}({period.label})',
+							"fieldtype": "Currency",
+							"options": "currency",
+							"width": 150
+						})
+					if periodicity!="Yearly":
+						if not accumulated_in_group_company:
+							columns.append({
+								#"fieldname": "total",
+								"fieldname": f"{company}(total)",
+								"label": f'{company} Total',
+								"fieldtype": "Currency",
+								"width": 150
+							})
+		else:
+			for period in period_list:
 				columns.append({
-					#"fieldname": "total",
-					"fieldname": f"{company}(total)",
-					"label": f'{company} Total',
+					"fieldname": f'{company}({period.key})',
+					"label": f'{company}({period.label})',
+					"fieldtype": "Currency",
+					"options": "currency",
+					"width": 150
+					})
+			if periodicity!="Yearly":
+				if not accumulated_in_group_company:
+					columns.append({
+						#"fieldname": "total",
+						"fieldname": f"{company}(total)",
+						"label": f'{company} Total',
+						"fieldtype": "Currency",
+						"width": 150
+					})
+	if filters.get('compare_with_company'):
+		columns.append({
+					"fieldname": "variance",
+					"label": "variance",
 					"fieldtype": "Currency",
 					"width": 150
 				})
@@ -230,10 +260,10 @@ def get_data(companies, root_type, balance_must_be, period_list, filters=None, i
 
 	calculate_values(accounts_by_name, gl_entries_by_account, companies, period_list, filters, cost_center_wise=cost_center_wise)
 	accumulate_values_into_parents(accounts, accounts_by_name, companies)
-	out = prepare_data(accounts, period_list, balance_must_be, companies, company_currency)
+	out = prepare_data(accounts, period_list, balance_must_be, companies, company_currency, filters)
 
 	if out:
-		add_total_row(out, root_type, balance_must_be, companies, company_currency, period_list)
+		add_total_row(out, root_type, balance_must_be, companies, company_currency, period_list, filters)
 
 	return out
 
@@ -313,7 +343,7 @@ def get_accounts(root_type, filters):
 			`tabAccount` where company = %s and root_type = %s
 		""" , (filters.get('company'), root_type), as_dict=1)
 
-def prepare_data(accounts, period_list, balance_must_be, companies, company_currency):
+def prepare_data(accounts, period_list, balance_must_be, companies, company_currency, filters):
 	data = []
 
 	year_start_date = period_list[0]["year_start_date"]
@@ -335,21 +365,43 @@ def prepare_data(accounts, period_list, balance_must_be, companies, company_curr
 		})
 		for company in companies:
 			total = 0
-			for period in period_list:
-				if d.get(f'{company}({period.key})') and balance_must_be == "Credit":
-					# change sign based on Debit or Credit, since calculation is done using (debit - credit)
-					d[f'{company}({period.key})'] *= -1
+			if filters.get('compare_with_company') and filters.from_company and filters.to_company:
+				if filters.from_company == company or filters.to_company == company:
+					for period in period_list:
+						if d.get(f'{company}({period.key})') and balance_must_be == "Credit":
+							# change sign based on Debit or Credit, since calculation is done using (debit - credit)
+							d[f'{company}({period.key})'] *= -1
 
-				row[f'{company}({period.key})'] = flt(d.get(f'{company}({period.key})', 0.0), 3)
+						row[f'{company}({period.key})'] = flt(d.get(f'{company}({period.key})', 0.0), 3)
 
-				if abs(row[f'{company}({period.key})']) >= 0.005:
-					# ignore zero values
-					has_value = True
-					total += flt(row[f'{company}({period.key})'])
+						if abs(row[f'{company}({period.key})']) >= 0.005:
+							# ignore zero values
+							has_value = True
+							total += flt(row[f'{company}({period.key})'])
 
-			row["has_value"] = has_value
-			row["total"] = total
-			row[f"{company}(total)"] = total
+					row["has_value"] = has_value
+					row["total"] = total
+					row[f"{company}(total)"] = total
+			else:
+				for period in period_list:
+					if d.get(f'{company}({period.key})') and balance_must_be == "Credit":
+						# change sign based on Debit or Credit, since calculation is done using (debit - credit)
+						d[f'{company}({period.key})'] *= -1
+
+					row[f'{company}({period.key})'] = flt(d.get(f'{company}({period.key})', 0.0), 3)
+
+					if abs(row[f'{company}({period.key})']) >= 0.005:
+						# ignore zero values
+						has_value = True
+						total += flt(row[f'{company}({period.key})'])
+
+				row["has_value"] = has_value
+				row["total"] = total
+				row[f"{company}(total)"] = total
+			
+		if filters.get('compare_with_company') and filters.from_company and filters.to_company:
+			row['variance'] = row[f"{filters.from_company}(total)"] - row[f"{filters.to_company}(total)"]
+
 		data.append(row)
 
 	return data
@@ -424,7 +476,7 @@ def get_additional_conditions(from_date, ignore_closing_entries, filters):
 
 	return " and {}".format(" and ".join(additional_conditions)) if additional_conditions else ""
 
-def add_total_row(out, root_type, balance_must_be, companies, company_currency, period_list):
+def add_total_row(out, root_type, balance_must_be, companies, company_currency, period_list, filters):
 	total_row = {
 		"account_name": "'" + _("Total {0} ({1})").format(_(root_type), _(balance_must_be)) + "'",
 		"account": "'" + _("Total {0} ({1})").format(_(root_type), _(balance_must_be)) + "'",
@@ -437,15 +489,24 @@ def add_total_row(out, root_type, balance_must_be, companies, company_currency, 
 			#total_row.setdefault(company, 0.0)
 			#total_row[company] += row.get(company, 0.0)
 			#row[company] = 0.0
-			
-			total_row.setdefault(f'{company}(total)', 0.0)
-			for period in period_list:
-				total_row.setdefault(f'{company}({period.key})', 0.0)
-				total_row[f'{company}({period.key})'] += row.get(f'{company}({period.key})', 0.0)
-			total_row[f'{company}(total)'] += flt(row[f'{company}(total)'])
+			if filters.compare_with_company and filters.from_company and filters.to_company:
+				if filters.from_company == company or filters.to_company == company:
+					total_row.setdefault(f'{company}(total)', 0.0)
+					for period in period_list:
+						total_row.setdefault(f'{company}({period.key})', 0.0)
+						total_row[f'{company}({period.key})'] += row.get(f'{company}({period.key})', 0.0)
+					total_row[f'{company}(total)'] += flt(row[f'{company}(total)'])
+					total_row.setdefault("total", 0.0)
+					total_row["total"] += flt(row["total"])
+			else:
+				total_row.setdefault(f'{company}(total)', 0.0)
+				for period in period_list:
+					total_row.setdefault(f'{company}({period.key})', 0.0)
+					total_row[f'{company}({period.key})'] += row.get(f'{company}({period.key})', 0.0)
+				total_row[f'{company}(total)'] += flt(row[f'{company}(total)'])
 
-			total_row.setdefault("total", 0.0)
-			total_row["total"] += flt(row["total"])
+				total_row.setdefault("total", 0.0)
+				total_row["total"] += flt(row["total"])
 			#row["total"] = ""
 
 	if "total" in total_row:

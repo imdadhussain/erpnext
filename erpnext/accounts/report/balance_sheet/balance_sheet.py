@@ -122,7 +122,7 @@ def create_equity_with_provisions(provisional_profit_loss, period_list):
 	equity.append({}) #blank line for better optics post adding the provisions to the equity summary
 	return equity
 
-def get_provisional_profit_loss(asset, liability, equity, period_list, company, currency=None, consolidated=False):
+def get_provisional_profit_loss(asset, liability, equity, period_list, company, companies=None, currency=None, consolidated=False):
 	provisional_profit_loss = {}
 	total_row = {}
 
@@ -137,25 +137,50 @@ def get_provisional_profit_loss(asset, liability, equity, period_list, company, 
 		}
 		has_value = False
 
-		for period in period_list:
-			key = period if consolidated else period.key
-			effective_liability = 0.0
-			if liability:
-				effective_liability += flt(liability[-2].get(key))
-			if equity:
-				effective_liability += flt(equity[-2].get(key))
+		if consolidated:
+			for company in companies:
+				for period in period_list:
+					key = f'{company}({period.key})'
+					effective_liability = 0.0
+					if liability:
+						effective_liability += flt(liability[-2].get(key))
+					if equity:
+						effective_liability += flt(equity[-2].get(key))
 
-			provisional_profit_loss[key] = flt(asset[-2].get(key)) - effective_liability
-			total_row[key] = effective_liability + provisional_profit_loss[key]
+					provisional_profit_loss[key] = flt(asset[-2].get(key)) - effective_liability
+					total_row[key] = effective_liability + provisional_profit_loss[key]
 
-			if provisional_profit_loss[key]:
-				has_value = True
+					if provisional_profit_loss[key]:
+						has_value = True
 
-			total += flt(provisional_profit_loss[key])
-			provisional_profit_loss["total"] = total
+					total += flt(provisional_profit_loss[key])
+					#provisional_profit_loss["total"] = total
+					provisional_profit_loss[f"{company}(total)"] = total
 
-			total_row_total += flt(total_row[key])
-			total_row["total"] = total_row_total
+					total_row_total += flt(total_row[key])
+					#total_row["total"] = total_row_total
+					total_row[f"{company}(total)"] = total_row_total
+
+		else:
+			for period in period_list:
+				key = period if consolidated else period.key
+				effective_liability = 0.0
+				if liability:
+					effective_liability += flt(liability[-2].get(key))
+				if equity:
+					effective_liability += flt(equity[-2].get(key))
+
+				provisional_profit_loss[key] = flt(asset[-2].get(key)) - effective_liability
+				total_row[key] = effective_liability + provisional_profit_loss[key]
+
+				if provisional_profit_loss[key]:
+					has_value = True
+
+				total += flt(provisional_profit_loss[key])
+				provisional_profit_loss["total"] = total
+
+				total_row_total += flt(total_row[key])
+				total_row["total"] = total_row_total
 
 		if has_value:
 			provisional_profit_loss.update({
