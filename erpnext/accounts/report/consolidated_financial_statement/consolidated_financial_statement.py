@@ -24,10 +24,6 @@ def execute(filters=None):
 	period_list = get_period_list(filters.from_date, filters.to_date,
 		filters.periodicity, filters.accumulated_in_group_company)
 
-	#fiscal_year = get_fiscal_year_data(filters.from_date, filters.to_date)
-	# get_fiscal_year_data(filters.get('from_fiscal_year'), filters.get('to_fiscal_year'))
-
-
 	companies_column, companies = get_companies(filters)
 	columns = get_columns(companies_column, filters.periodicity, period_list,filters.accumulated_in_group_company)
 
@@ -319,8 +315,7 @@ def get_accounts(root_type, filters):
 
 def prepare_data(accounts, period_list, balance_must_be, companies, company_currency):
 	data = []
-	#year_start_date = fiscal_year.get("year_start_date")
-	#year_end_date = fiscal_year.get("year_end_date")
+
 	year_start_date = period_list[0]["year_start_date"]
 	year_end_date = period_list[-1]["year_end_date"]
 
@@ -439,20 +434,19 @@ def add_total_row(out, root_type, balance_must_be, companies, company_currency, 
 	for row in out:
 		#if not row.get("parent_account"):
 		for company in companies:
-			total_row.setdefault(company, 0.0)
-			total_row[company] += row.get(company, 0.0)
-			row[company] = 0.0
+			#total_row.setdefault(company, 0.0)
+			#total_row[company] += row.get(company, 0.0)
+			#row[company] = 0.0
 			
 			total_row.setdefault(f'{company}(total)', 0.0)
 			for period in period_list:
-				f'{company}({period.key})'
 				total_row.setdefault(f'{company}({period.key})', 0.0)
 				total_row[f'{company}({period.key})'] += row.get(f'{company}({period.key})', 0.0)
-				total_row[f'{company}(total)'] += flt(row[f'{company}(total)'])
+			total_row[f'{company}(total)'] += flt(row[f'{company}(total)'])
 
 			total_row.setdefault("total", 0.0)
 			total_row["total"] += flt(row["total"])
-			row["total"] = ""
+			#row["total"] = ""
 
 	if "total" in total_row:
 		out.append(total_row)
