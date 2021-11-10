@@ -110,7 +110,7 @@ def get_income_expense_data(companies, period_list, filters, cost_center_wise=Fa
 
 	expense = get_data(companies, "Expense", "Debit", period_list, filters, ignore_closing_entries=True, cost_center_wise=cost_center_wise)
 
-	net_profit_loss = get_net_profit_loss(income, expense, companies, filters.company, company_currency, True)
+	net_profit_loss = get_net_profit_loss(income, expense, period_list, filters.company, companies,company_currency, True)
 
 	return income, expense, net_profit_loss
 
@@ -221,7 +221,7 @@ def get_columns(companies, periodicity, period_list, filters, accumulated_in_gro
 					"fieldtype": "Currency",
 					"options": "currency",
 					"width": 150
-					})
+				})
 			if periodicity!="Yearly":
 				if not accumulated_in_group_company:
 					columns.append({

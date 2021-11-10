@@ -139,6 +139,7 @@ def get_provisional_profit_loss(asset, liability, equity, period_list, company, 
 
 		if consolidated:
 			for company in companies:
+				total = total_row_total=0
 				for period in period_list:
 					key = f'{company}({period.key})'
 					effective_liability = 0.0
