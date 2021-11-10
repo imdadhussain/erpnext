@@ -5,9 +5,9 @@ from __future__ import unicode_literals
 import frappe, erpnext
 from frappe import _
 from frappe.utils import flt, cint, getdate
-from erpnext.accounts.utils import get_fiscal_year
-from erpnext.accounts.report.utils import get_currency, convert_to_presentation_currency
-from erpnext.accounts.report.financial_statements import get_fiscal_year_data, sort_accounts,get_period_list
+
+from erpnext.accounts.report.utils import convert_to_presentation_currency
+from erpnext.accounts.report.financial_statements import sort_accounts,get_period_list
 from erpnext.accounts.report.balance_sheet.balance_sheet import (get_provisional_profit_loss,
 	check_opening_balance, get_chart_data)
 from erpnext.accounts.report.profit_and_loss_statement.profit_and_loss_statement import (get_net_profit_loss,
@@ -22,7 +22,7 @@ def execute(filters=None):
 		return columns, data, message, chart
 
 	if filters.get('compare_with_company') and not (filters.from_company or filters.to_company):
-		frappe.msgprint(_("Please select From Company  and To Company"));
+		frappe.msgprint(_("Please select From Company  and To Company"))
 
 	period_list = get_period_list(filters.from_date, filters.to_date,
 		filters.periodicity, filters.accumulated_in_group_company)
@@ -195,24 +195,24 @@ def get_columns(companies, periodicity, period_list, filters, accumulated_in_gro
 
 	for company in companies:
 		if filters.get('compare_with_company') and filters.from_company and filters.to_company:
-				if filters.from_company == company or filters.to_company == company:
-					for period in period_list:
+			if filters.from_company == company or filters.to_company == company:
+				for period in period_list:
+					columns.append({
+						"fieldname": f'{company}({period.key})',
+						"label": f'{company}({period.label})',
+						"fieldtype": "Currency",
+						"options": "currency",
+						"width": 150
+					})
+				if periodicity!="Yearly":
+					if not accumulated_in_group_company:
 						columns.append({
-							"fieldname": f'{company}({period.key})',
-							"label": f'{company}({period.label})',
+							#"fieldname": "total",
+							"fieldname": f"{company}(total)",
+							"label": f'{company} Total',
 							"fieldtype": "Currency",
-							"options": "currency",
 							"width": 150
 						})
-					if periodicity!="Yearly":
-						if not accumulated_in_group_company:
-							columns.append({
-								#"fieldname": "total",
-								"fieldname": f"{company}(total)",
-								"label": f'{company} Total',
-								"fieldtype": "Currency",
-								"width": 150
-							})
 		else:
 			for period in period_list:
 				columns.append({
@@ -233,11 +233,11 @@ def get_columns(companies, periodicity, period_list, filters, accumulated_in_gro
 					})
 	if filters.get('compare_with_company'):
 		columns.append({
-					"fieldname": "variance",
-					"label": "variance",
-					"fieldtype": "Currency",
-					"width": 150
-				})
+			"fieldname": "variance",
+			"label": "variance",
+			"fieldtype": "Currency",
+			"width": 150
+		})
 
 	return columns
 
