@@ -68,11 +68,6 @@ def get_balance_sheet_data(period_list, companies, columns, filters, cost_center
 			"warn_if_negative": True,
 			"currency": company_currency
 		}
-		# for period in period_list:
-		# 	unclosed[period.key] = opening_balance
-		# 	if provisional_profit_loss:
-		# 		provisional_profit_loss[period.key] = provisional_profit_loss[period.key] - opening_balance
-		# unclosed["total"]=opening_balance
 
 		for company in companies:
 			unclosed[company] = opening_balance
@@ -196,41 +191,9 @@ def get_columns(companies, periodicity, period_list, filters, accumulated_in_gro
 	for company in companies:
 		if filters.get('compare_with_company') and filters.from_company and filters.to_company:
 			if filters.from_company == company or filters.to_company == company:
-				for period in period_list:
-					columns.append({
-						"fieldname": f'{company}({period.key})',
-						"label": f'{company}({period.label})',
-						"fieldtype": "Currency",
-						"options": "currency",
-						"width": 150
-					})
-				if periodicity!="Yearly":
-					if not accumulated_in_group_company:
-						columns.append({
-							#"fieldname": "total",
-							"fieldname": f"{company}(total)",
-							"label": f'{company} Total',
-							"fieldtype": "Currency",
-							"width": 150
-						})
+				columns = add_periodicity_columns(columns, period_list, company, periodicity, accumulated_in_group_company)
 		else:
-			for period in period_list:
-				columns.append({
-					"fieldname": f'{company}({period.key})',
-					"label": f'{company}({period.label})',
-					"fieldtype": "Currency",
-					"options": "currency",
-					"width": 150
-				})
-			if periodicity!="Yearly":
-				if not accumulated_in_group_company:
-					columns.append({
-						#"fieldname": "total",
-						"fieldname": f"{company}(total)",
-						"label": f'{company} Total',
-						"fieldtype": "Currency",
-						"width": 150
-					})
+			columns = add_periodicity_columns(columns, period_list, company, periodicity, accumulated_in_group_company)
 	if filters.get('compare_with_company'):
 		columns.append({
 			"fieldname": "variance",
@@ -239,6 +202,25 @@ def get_columns(companies, periodicity, period_list, filters, accumulated_in_gro
 			"width": 150
 		})
 
+	return columns
+
+def add_periodicity_columns(columns, period_list, company, periodicity, accumulated_in_group_company):
+	for period in period_list:
+		columns.append({
+			"fieldname": f'{company}({period.key})',
+			"label": f'{company}({period.label})',
+			"fieldtype": "Currency",
+			"options": "currency",
+			"width": 150
+		})
+	if periodicity!="Yearly":
+		if not accumulated_in_group_company:
+			columns.append({
+				"fieldname": f"{company}(total)",
+				"label": f'{company} Total',
+				"fieldtype": "Currency",
+				"width": 150
+			})
 	return columns
 
 def get_data(companies, root_type, balance_must_be, period_list, filters=None, ignore_closing_entries=False, cost_center_wise=False):
