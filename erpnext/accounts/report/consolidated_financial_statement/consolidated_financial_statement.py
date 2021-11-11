@@ -349,37 +349,9 @@ def prepare_data(accounts, period_list, balance_must_be, companies, company_curr
 			total = 0
 			if filters.get('compare_with_company') and filters.from_company and filters.to_company:
 				if filters.from_company == company or filters.to_company == company:
-					for period in period_list:
-						if d.get(f'{company}({period.key})') and balance_must_be == "Credit":
-							# change sign based on Debit or Credit, since calculation is done using (debit - credit)
-							d[f'{company}({period.key})'] *= -1
-
-						row[f'{company}({period.key})'] = flt(d.get(f'{company}({period.key})', 0.0), 3)
-
-						if abs(row[f'{company}({period.key})']) >= 0.005:
-							# ignore zero values
-							has_value = True
-							total += flt(row[f'{company}({period.key})'])
-
-					row["has_value"] = has_value
-					row["total"] = total
-					row[f"{company}(total)"] = total
+					d, row, total = add_periodicity_for_prepare_data(period_list, company, balance_must_be, has_value, d, row, total)
 			else:
-				for period in period_list:
-					if d.get(f'{company}({period.key})') and balance_must_be == "Credit":
-						# change sign based on Debit or Credit, since calculation is done using (debit - credit)
-						d[f'{company}({period.key})'] *= -1
-
-					row[f'{company}({period.key})'] = flt(d.get(f'{company}({period.key})', 0.0), 3)
-
-					if abs(row[f'{company}({period.key})']) >= 0.005:
-						# ignore zero values
-						has_value = True
-						total += flt(row[f'{company}({period.key})'])
-
-				row["has_value"] = has_value
-				row["total"] = total
-				row[f"{company}(total)"] = total
+				d, row, total = add_periodicity_for_prepare_data(period_list, company, balance_must_be, has_value, d, row, total)
 			
 		if filters.get('compare_with_company') and filters.from_company and filters.to_company:
 			row['variance'] = row[f"{filters.from_company}(total)"] - row[f"{filters.to_company}(total)"]
@@ -387,6 +359,24 @@ def prepare_data(accounts, period_list, balance_must_be, companies, company_curr
 		data.append(row)
 
 	return data
+
+def add_periodicity_for_prepare_data(period_list, company, balance_must_be, has_value, d, row, total):
+	for period in period_list:
+		if d.get(f'{company}({period.key})') and balance_must_be == "Credit":
+			# change sign based on Debit or Credit, since calculation is done using (debit - credit)
+			d[f'{company}({period.key})'] *= -1
+
+		row[f'{company}({period.key})'] = flt(d.get(f'{company}({period.key})', 0.0), 3)
+
+		if abs(row[f'{company}({period.key})']) >= 0.005:
+			# ignore zero values
+			has_value = True
+			total += flt(row[f'{company}({period.key})'])
+
+	row["has_value"] = has_value
+	row["total"] = total
+	row[f"{company}(total)"] = total
+	return d, row, total
 
 def set_gl_entries_by_account(from_date, to_date, root_lft, root_rgt, filters, gl_entries_by_account,
 	accounts_by_name, ignore_closing_entries=False):
