@@ -59,20 +59,11 @@ def get_columns(cost_centers, periodicity, period_list):
 			})
 		if periodicity!="Yearly":
 			columns.append({
-				#"fieldname": "total",
 				"fieldname": f"{cost_center}(total)",
 				"label": f'{cost_center} Total',
 				"fieldtype": "Currency",
 				"width": 150
 			})
 	
-	# columns.append({
-	# 	"fieldname": "total",
-	# 	"label": _("Total"),
-	# 	"fieldtype": "Currency",
-	# 	"options": "Currency",
-	# 	"width": 150
-	# })
-
 	return columns
 
