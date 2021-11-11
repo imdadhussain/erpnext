@@ -456,11 +456,7 @@ def add_total_row(out, root_type, balance_must_be, companies, company_currency, 
 	}
 
 	for row in out:
-		#if not row.get("parent_account"):
 		for company in companies:
-			#total_row.setdefault(company, 0.0)
-			#total_row[company] += row.get(company, 0.0)
-			#row[company] = 0.0
 			if filters.compare_with_company and filters.from_company and filters.to_company:
 				if filters.from_company == company or filters.to_company == company:
 					total_row.setdefault(f'{company}(total)', 0.0)
