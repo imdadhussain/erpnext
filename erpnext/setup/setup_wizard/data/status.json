@@ -97,5 +97,11 @@
     },
     {
         "status": "Draft"
+    },
+    {
+        "status": "Not Billed"
+    },
+    {
+        "status": "Not Delivered"
     }
 ]
